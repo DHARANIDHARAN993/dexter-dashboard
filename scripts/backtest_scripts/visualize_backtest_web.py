@@ -71,6 +71,7 @@ def build_table(df):
         buy_date = row.get('buy_date', '-') if pd.notna(row.get('buy_date', None)) else '-'
         buy_price = row.get('buy_price', float('nan'))
         buy_price_fmt = format_price(buy_price)
+        ema_at_buy = format_price(row.get('ema_at_buy', '-'))
         buy_value = '-' if buy_price_fmt == '-' else format_price(float(buy_price_fmt) * qty)
         sell_date = row.get('hit_date', '-') if pd.notna(row.get('hit_date', None)) else '-'
         sell_price = row.get('target_price', '-') if pd.notna(row.get('hit_date', None)) and pd.notna(row.get('target_price', None)) else '-'
@@ -80,8 +81,8 @@ def build_table(df):
         days_to_target = row.get('days_to_target', '-')
         if pd.isna(days_to_target):
             days_to_target = '-'
-        rows.append([symbol, current_price, qty, buy_date, buy_price_fmt, buy_value, sell_date, sell_price_fmt, sell_value, profit, days_to_target])
-    columns = ['Symbol', 'Current Price', 'Qty', 'Buy Date', 'Buy Price', 'Buy Value', 'Sell Date', 'Sell Price', 'Sell Value', 'Profit', 'No of Days to Hit Target']
+        rows.append([symbol, current_price, qty, buy_date, buy_price_fmt, ema_at_buy, buy_value, sell_date, sell_price_fmt, sell_value, profit, days_to_target])
+    columns = ['Symbol', 'Current Price', 'Qty', 'Buy Date', 'Buy Price', 'EMA at Buy', 'Buy Value', 'Sell Date', 'Sell Price', 'Sell Value', 'Profit', 'No of Days to Hit Target']
     return pd.DataFrame(rows, columns=columns)
 
 table_df = build_table(filtered_df)
