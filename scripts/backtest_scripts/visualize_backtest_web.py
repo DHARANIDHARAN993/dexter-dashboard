@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 # Path to results CSV
-data_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'))
+data_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..', 'data'))
 results_csv = os.path.join(data_dir, 'BackTestResults.csv')
 
 st.set_page_config(page_title='Backtest Results Dashboard', layout='wide')
@@ -86,12 +86,28 @@ def build_table(df):
 
 table_df = build_table(filtered_df)
 
+# --- Metrics Row ---
+with st.container():
+    col1, col2, col3, col4 = st.columns(4)
+    total_profit = pd.to_numeric(table_df['Profit'], errors='coerce').dropna().sum()
+    num_trades = len(table_df)
+    num_open = table_df[table_df['Sell Date'] == '-'].shape[0]
+    num_closed = table_df[table_df['Sell Date'] != '-'].shape[0]
+    avg_days = pd.to_numeric(table_df['No of Days to Hit Target'], errors='coerce').dropna().mean()
+    col1.metric("Total Profit", f"{total_profit:.2f}")
+    col2.metric("Total Trades", num_trades)
+    col3.metric("Open Positions", num_open)
+    col4.metric("Avg Days to Target", f"{avg_days:.2f}" if not pd.isna(avg_days) else "-")
+
 # --- Tabs for Visualizations ---
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Results Table",
     "Days to Target",
     "Open vs Closed",
-    "Profit Distribution"
+    "Profit Distribution",
+    "Buy Price vs Days to Target",
+    "Top Profitable Trades",
+    "Cumulative Profit"
 ])
 
 with tab1:
@@ -105,9 +121,7 @@ with tab2:
     if not closed.empty:
         chart_df = closed[['Symbol', 'No of Days to Hit Target']].copy()
         chart_df['No of Days to Hit Target'] = pd.to_numeric(chart_df['No of Days to Hit Target'])
-        # Streamlit's built-in bar chart
         st.bar_chart(chart_df.set_index('Symbol'))
-        # Matplotlib bar chart
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.bar(chart_df['Symbol'], chart_df['No of Days to Hit Target'], color='skyblue')
         ax.set_xlabel('Stock Symbol')
@@ -138,5 +152,57 @@ with tab4:
         st.plotly_chart(fig_hist, use_container_width=True)
     else:
         st.info('No profit data to display.')
+
+with tab5:
+    st.subheader('Buy Price vs. Days to Target')
+    scatter_df = table_df[(table_df['Buy Price'] != '-') & (table_df['No of Days to Hit Target'] != '-')]
+    if not scatter_df.empty:
+        fig_scatter = px.scatter(
+            scatter_df,
+            x='Buy Price',
+            y='No of Days to Hit Target',
+            color='Symbol',
+            hover_data=['Buy Date', 'Sell Date', 'Profit'],
+            title='Buy Price vs. Days to Target'
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:
+        st.info('Not enough data for scatter plot.')
+
+with tab6:
+    st.subheader('Top 10 Profitable Trades')
+    top_df = table_df[table_df['Profit'] != '-'].copy()
+    top_df['Profit'] = pd.to_numeric(top_df['Profit'], errors='coerce')
+    top_df = top_df.sort_values('Profit', ascending=False).head(10)
+    if not top_df.empty:
+        fig_top = px.bar(
+            top_df,
+            x='Symbol',
+            y='Profit',
+            color='Symbol',
+            hover_data=['Buy Date', 'Sell Date', 'Buy Value', 'Sell Value'],
+            title='Top 10 Profitable Trades'
+        )
+        st.plotly_chart(fig_top, use_container_width=True)
+    else:
+        st.info('No profit data to display.')
+
+with tab7:
+    st.subheader('Cumulative Profit Over Time')
+    closed = table_df[(table_df['Sell Date'] != '-') & (table_df['Profit'] != '-')]
+    if not closed.empty:
+        closed['Sell Date'] = pd.to_datetime(closed['Sell Date'])
+        closed = closed.sort_values('Sell Date')
+        closed['Profit'] = pd.to_numeric(closed['Profit'], errors='coerce')
+        closed['Cumulative Profit'] = closed['Profit'].cumsum()
+        fig_cum = px.line(
+            closed,
+            x='Sell Date',
+            y='Cumulative Profit',
+            title='Cumulative Profit Over Time'
+        )
+        st.plotly_chart(fig_cum, use_container_width=True)
+    else:
+        st.info('No closed trades to show cumulative profit.')
 
 st.caption('Powered by Streamlit | Data from BackTestResults.csv') 
