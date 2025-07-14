@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 # Path to results CSV
-data_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..', 'data'))
+data_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'))
 results_csv = os.path.join(data_dir, 'BackTestResults.csv')
 
 st.set_page_config(page_title='Backtest Results Dashboard', layout='wide')
