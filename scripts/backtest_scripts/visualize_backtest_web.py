@@ -78,11 +78,12 @@ def build_table(df):
         sell_price_fmt = format_price(sell_price)
         sell_value = '-' if sell_price_fmt == '-' else format_price(float(sell_price_fmt) * qty)
         profit = '-' if sell_value == '-' or buy_value == '-' else format_price(float(sell_value) - float(buy_value))
+        unrealized_pnl = format_price(row.get('unrealized_pnl', '-'))
         days_to_target = row.get('days_to_target', '-')
         if pd.isna(days_to_target):
             days_to_target = '-'
-        rows.append([symbol, current_price, qty, buy_date, buy_price_fmt, ema_at_buy, buy_value, sell_date, sell_price_fmt, sell_value, profit, days_to_target])
-    columns = ['Symbol', 'Current Price', 'Qty', 'Buy Date', 'Buy Price', 'EMA at Buy', 'Buy Value', 'Sell Date', 'Sell Price', 'Sell Value', 'Profit', 'No of Days to Hit Target']
+        rows.append([symbol, current_price, qty, buy_date, buy_price_fmt, ema_at_buy, buy_value, sell_date, sell_price_fmt, sell_value, profit, unrealized_pnl, days_to_target])
+    columns = ['Symbol', 'Current Price', 'Qty', 'Buy Date', 'Buy Price', 'EMA at Buy', 'Buy Value', 'Sell Date', 'Sell Price', 'Sell Value', 'Profit', 'Unrealized PnL', 'No of Days to Hit Target']
     return pd.DataFrame(rows, columns=columns)
 
 table_df = build_table(filtered_df)
