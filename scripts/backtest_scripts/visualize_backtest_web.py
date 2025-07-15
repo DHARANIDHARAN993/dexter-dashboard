@@ -7,7 +7,7 @@ import plotly.express as px
 
 # Path to results CSV
 data_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../..', 'data'))
-results_csv = os.path.join(data_dir, 'BackTestHistoryResults.csv')
+results_csv = os.path.join(data_dir, 'BackTestFullHistory.csv')
 
 st.set_page_config(page_title='Backtest Results Dashboard', layout='wide')
 st.title('Backtest Results Dashboard')
@@ -35,10 +35,16 @@ symbol_filter = st.sidebar.multiselect('Symbol', symbol_options, default=symbol_
 
 status_filter = st.sidebar.radio('Position Status', ['All', 'Open', 'Closed'], index=0)
 
+# Handle buy_date as IST string, filter by date part only
+def get_date_only(s):
+    if pd.isna(s):
+        return '-'
+    return str(s)[:10]
+
 if 'buy_date' in df.columns:
-    df['buy_date'] = pd.to_datetime(df['buy_date'], errors='coerce')
-    min_date = df['buy_date'].min()
-    max_date = df['buy_date'].max()
+    df['buy_date_only'] = df['buy_date'].apply(get_date_only)
+    min_date = pd.to_datetime(df['buy_date_only'], errors='coerce').min()
+    max_date = pd.to_datetime(df['buy_date_only'], errors='coerce').max()
     buy_date_range = st.sidebar.date_input('Buy Date Range', [min_date, max_date])
 else:
     buy_date_range = None
@@ -50,9 +56,9 @@ if status_filter == 'Open':
 elif status_filter == 'Closed':
     filtered_df = filtered_df[filtered_df['hit_date'].notna()]
 
-if buy_date_range and len(buy_date_range) == 2:
+if buy_date_range and len(buy_date_range) == 2 and 'buy_date_only' in filtered_df.columns:
     start, end = pd.to_datetime(buy_date_range[0]), pd.to_datetime(buy_date_range[1])
-    filtered_df = filtered_df[(filtered_df['buy_date'] >= start) & (filtered_df['buy_date'] <= end)]
+    filtered_df = filtered_df[(pd.to_datetime(filtered_df['buy_date_only'], errors='coerce') >= start) & (pd.to_datetime(filtered_df['buy_date_only'], errors='coerce') <= end)]
 
 def format_price(val):
     try:
@@ -82,7 +88,9 @@ def build_table(df):
         days_to_target = row.get('days_to_target', '-')
         if pd.isna(days_to_target):
             days_to_target = '-'
-        rows.append([symbol, current_price, qty, buy_date, buy_price_fmt, ema_at_buy, buy_value, sell_date, sell_price_fmt, sell_value, profit, unrealized_pnl, days_to_target])
+        rows.append([
+            symbol, current_price, qty, buy_date, buy_price_fmt, ema_at_buy, buy_value, sell_date, sell_price_fmt, sell_value, profit, unrealized_pnl, days_to_target
+        ])
     columns = ['Symbol', 'Current Price', 'Qty', 'Buy Date', 'Buy Price', 'EMA at Buy', 'Buy Value', 'Sell Date', 'Sell Price', 'Sell Value', 'Profit', 'Unrealized PnL', 'No of Days to Hit Target']
     return pd.DataFrame(rows, columns=columns)
 
